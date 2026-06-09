@@ -2,6 +2,9 @@ package cmd
 
 import (
 	"os"
+	"fmt"
+	"log"
+	"log/slog"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -17,6 +20,22 @@ Created by Jonas Vinther.`,
 		address, _ := cmd.Flags().GetString("address")
 		if address != "" {
 			os.Setenv("NOMAD_ADDR", address)
+		}
+
+		log.SetFlags(0)
+		log.SetOutput(os.Stdout)	
+
+		// Start with INFO
+		info := slog.Level(0)
+
+		logLevel, _ := cmd.Flags().GetString("log-level")
+		if logLevel != "" {
+			err := info.UnmarshalText([]byte(logLevel))
+			if err != nil {
+				return fmt.Errorf("error parsing log level %q: %w", logLevel, err)
+			}
+		
+			slog.SetLogLoggerLevel(info)
 		}
 
 		if viper.IsSet("NOMAD_ADDR") && address == "" {
@@ -38,6 +57,7 @@ func Execute() error {
 
 func init() {
 	rootCmd.PersistentFlags().StringP("address", "a", "", "Address of the Nomad server")
+	rootCmd.PersistentFlags().StringP("log-level", "l", "INFO", "Log level")
 
 	// AutomaticEnv makes Viper load environment variables
 	viper.AutomaticEnv()

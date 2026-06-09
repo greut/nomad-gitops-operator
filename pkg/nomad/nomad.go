@@ -2,9 +2,13 @@ package nomad
 
 import (
 	"fmt"
+	"log/slog"
 
 	nc "github.com/hashicorp/nomad/api"
+	"github.com/hashicorp/nomad/jobspec2"
 )
+
+const metaKey = "nomoporator"
 
 type Client struct {
 	nc *nc.Client
@@ -47,8 +51,15 @@ func (client *Client) ListJobs() (map[string]*nc.Job, error) {
 	return jobs, nil
 }
 
-func (client *Client) ParseJob(job string) (*nc.Job, error) {
-	parsedJob, err := client.nc.Jobs().ParseHCL(job, false)
+func (client *Client) ParseJob(job []byte, baseDir, filename string, varFiles []string) (*nc.Job, error) {
+	parsedJob, err := jobspec2.ParseWithConfig(&jobspec2.ParseConfig{
+		Path: filename,
+		BaseDir: baseDir,
+		AllowFS: true,
+		VarFiles: varFiles,
+		Body: job,
+		Strict: true,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -56,10 +67,10 @@ func (client *Client) ParseJob(job string) (*nc.Job, error) {
 	return parsedJob, nil
 }
 
-func (client *Client) ApplyJob(job *nc.Job, hcl string) (string, error) {
+func (client *Client) ApplyJob(job *nc.Job, hcl, variables []byte) (string, error) {
 	// Adding metadata to identify the jobs managed by the Nomoporator
-	job.SetMeta("nomoporater", "true")
-	job.SetMeta("uid", "nomoporator")
+	job.SetMeta(metaKey, "true")
+	job.SetMeta("uid", metaKey)
 
 	// fmt.Printf("JobName: %s \n", job.GetName())
 
@@ -70,8 +81,9 @@ func (client *Client) ApplyJob(job *nc.Job, hcl string) (string, error) {
 
 	res, _, err := client.nc.Jobs().RegisterOpts(job, &nc.RegisterOptions{
 		Submission: &nc.JobSubmission{
-			Source: hcl,
+			Source: string(hcl),
 			Format: "hcl2",
+			Variables: string(variables),
 		},
 	}, nil)
 

@@ -1,5 +1,7 @@
-job "hello_world" {
-  
+variable "message" {
+}
+
+job "hello_world" {  
   datacenters = [
   "dc1"
 ]
@@ -49,7 +51,7 @@ job "hello_world" {
       }
 
       env {
-        MESSAGE = "Hello from Nomad!"
+        MESSAGE = var.message
       }
     }
   }

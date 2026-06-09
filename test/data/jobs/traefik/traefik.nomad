@@ -1,5 +1,4 @@
 job "traefik" {
-
   region      = "global"
   datacenters = [
   "dc1"
@@ -37,7 +36,7 @@ job "traefik" {
       driver = "docker"
 
       config {
-        image = "traefik:2.5"
+        image = "traefik:3.7"
         ports = [
   "https",
   "api",
